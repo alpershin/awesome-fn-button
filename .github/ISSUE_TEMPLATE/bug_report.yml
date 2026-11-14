@@ -1,0 +1,30 @@
+name: Bug report
+description: Report an installation, Fn configuration, or recovery problem.
+title: "[Bug]: "
+body:
+  - type: input
+    id: environment
+    attributes:
+      label: App and macOS versions
+      placeholder: "0.1.0; macOS version and build"
+    validations:
+      required: true
+  - type: input
+    id: keyboard
+    attributes:
+      label: Mac and keyboard
+      placeholder: "Mac model; built-in or external keyboard model"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: What happened?
+      description: Include steps, expected behavior, actual behavior, and whether signing out/back in changed it.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mention keyboard remappers if relevant. Review logs before sharing; do not upload your Preferences folder or backup file.

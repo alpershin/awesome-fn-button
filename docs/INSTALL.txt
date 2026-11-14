@@ -1,0 +1,26 @@
+Awesome Fn Button 0.1.0
+
+INSTALLATION
+1. Drag Awesome Fn Button.app into Applications.
+2. Open it from Applications.
+3. If macOS blocks the first launch, open System Settings > Privacy & Security,
+   choose Open Anyway, and confirm this app.
+   Apple instructions: https://support.apple.com/102445
+
+The app has a free ad hoc signature, without Developer ID or notarization.
+No paid Apple developer account is required.
+
+USAGE
+The app reads your settings and previews changes before applying them.
+Click Apply changes to back up the original values and configure Fn.
+If Fn has not updated yet, sign out and back in or restart your Mac.
+
+RECOVERY
+Open the app and click Restore original settings.
+Settings changed outside the app after applying are preserved.
+Backup: ~/Library/Application Support/AwesomeFnButton/backup.json
+Keep this file until you no longer need recovery.
+
+At least two selectable input sources are required.
+Fn input switching was verified by the project owner on macOS 27.0 / Apple Silicon.
+Other OS versions and keyboards have not been validated.
