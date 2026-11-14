@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/alpershin/awesome-fn-button/actions/workflows/ci.yml"><img src="https://github.com/alpershin/awesome-fn-button/actions/workflows/ci.yml/badge.svg" alt="macOS build"></a>
-  <a href="https://github.com/alpershin/awesome-fn-button/releases/tag/v0.1.0"><img src="https://img.shields.io/badge/release-0.1.0-E8BEA5" alt="0.1.0"></a>
+  <a href="https://github.com/alpershin/awesome-fn-button/releases/tag/v0.1.1"><img src="https://img.shields.io/badge/release-0.1.1-E8BEA5" alt="0.1.1"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-D4C8E8" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/platform-macOS-E1EDF5" alt="macOS">
 </p>
@@ -28,7 +28,7 @@ Fn should be predictable when you use it to switch languages. This project bring
 - **Focused:** configure input switching and disable detected conflicting Fn shortcuts.
 - **Local:** preferences and backups stay on your Mac. No server, account, or telemetry.
 - **Reversible:** keep the original values and restore them without overwriting later user changes.
-- **Open:** native Swift / SwiftUI, MIT licensed, with no third-party dependencies.
+- **Open:** native Swift / SwiftUI, MIT licensed, with no third-party runtime dependencies.
 
 ## How it works
 

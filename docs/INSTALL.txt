@@ -1,4 +1,4 @@
-Awesome Fn Button 0.1.0
+Awesome Fn Button 0.1.1
 
 INSTALLATION
 1. Drag Awesome Fn Button.app into Applications.
