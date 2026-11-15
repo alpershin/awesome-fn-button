@@ -50,6 +50,14 @@ You can close the app after applying settings; it does not intercept keystrokes 
 
 The app has a free **ad hoc** signature, with **no Developer ID or Apple notarization**. If macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway** for this app. See [Apple's instructions](https://support.apple.com/102445).
 
+**Terminal alternative:** After copying the app into Applications, you can remove the quarantine flag from this installed copy. Only do this for a downloaded build you trust. Open **Terminal**, enter the following command, and press **Return**:
+
+```sh
+xattr -dr com.apple.quarantine "/Applications/Awesome Fn Button.app"
+```
+
+Then open **Awesome Fn Button** from Applications. This command affects only this app and its contents; other macOS security checks can still apply.
+
 ZIP downloads contain the same application. A SHA-256 file is included with each release for checking download integrity.
 
 ### Development setup
