@@ -100,7 +100,7 @@ public final class Configuration {
             let before = try change.before.object()
             let after = try change.after.object()
             if change.address.member == nil {
-                guard (after as? NSNumber)?.intValue == 1,
+                guard after as? NSNumber == NSNumber(value: 0) || after as? NSNumber == NSNumber(value: 1),
                       before == nil || before is NSNumber else { throw FnError.message("Unsupported Fn assignment format.") }
             } else {
                 guard let original = before as? [String: Any], let disabled = after as? [String: Any],

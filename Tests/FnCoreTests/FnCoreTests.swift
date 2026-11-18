@@ -1,4 +1,5 @@
 import XCTest
+import CoreGraphics
 @testable import FnCore
 
 private final class MemoryPreferences: PreferenceStore {
@@ -144,5 +145,74 @@ final class FnCoreTests: XCTestCase {
         try config.apply(report.changes, inputSourceCount: 2)
         XCTAssertTrue(try config.restore().isEmpty)
         XCTAssertEqual(try store.read(.fn(currentHost: true)), try PreferenceValue(2))
+    }
+
+    func testDirectModeDisablesNativePickerAndRestoresLegacyAssignment() throws {
+        let store = MemoryPreferences()
+        store.values[.fn()] = try PreferenceValue(1)
+        store.values[.fn(currentHost: true)] = try PreferenceValue(1)
+        let config = Configuration(store: store, backupURL: backupURL)
+        let report = try Diagnostics.scan(store: store, sources: ["ABC", "Russian"], directSwitching: true)
+        XCTAssertEqual(report.changes.count, 2)
+        try config.apply(report.changes, inputSourceCount: 2)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(0))
+        XCTAssertEqual(try store.read(.fn(currentHost: true)), try PreferenceValue(0))
+        XCTAssertTrue(try Diagnostics.scan(store: store, sources: ["ABC", "Russian"], directSwitching: true).changes.isEmpty)
+        XCTAssertTrue(try config.restore().isEmpty)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(1))
+        XCTAssertEqual(try store.read(.fn(currentHost: true)), try PreferenceValue(1))
+    }
+
+    func testDirectModePreservesExternalFnChangesDuringRestore() throws {
+        let store = MemoryPreferences()
+        let config = Configuration(store: store, backupURL: backupURL)
+        try config.apply(Diagnostics.scan(store: store, sources: ["A", "B"], directSwitching: true).changes, inputSourceCount: 2)
+        store.values[.fn()] = try PreferenceValue(3)
+        XCTAssertEqual(try config.restore().count, 1)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(3))
+        XCTAssertTrue(config.hasBackup)
+    }
+
+    func testFnSwitchesOncePerReleaseWithoutWaitingOrDebouncing() {
+        var press = FnPress()
+        for _ in 0..<30 {
+            XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
+            XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
+            XCTAssertTrue(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
+            XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
+        }
+    }
+
+    func testFnChordsAndImplicitNavigationFlagsDoNotSwitchLanguage() {
+        for code: Int64 in [12, 96, 123, 117] {
+            var press = FnPress()
+            XCTAssertFalse(press.handle(type: .keyDown, keyCode: code, flags: .maskSecondaryFn))
+            XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
+            XCTAssertFalse(press.handle(type: .keyDown, keyCode: code, flags: .maskSecondaryFn))
+            XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
+            XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
+            XCTAssertTrue(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
+        }
+    }
+
+    func testModifiersAndResetCancelPendingFnPress() {
+        var press = FnPress()
+        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: [.maskSecondaryFn, .maskShift]))
+        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
+        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
+        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 56, flags: [.maskSecondaryFn, .maskShift]))
+        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 56, flags: .maskSecondaryFn))
+        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
+        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
+        press.reset()
+        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
+    }
+
+    func testMissingFnReleaseDoesNotLeaveTheNextTapStuckAfterTyping() {
+        var press = FnPress()
+        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
+        XCTAssertFalse(press.handle(type: .keyDown, keyCode: 0, flags: []))
+        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
+        XCTAssertTrue(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
     }
 }

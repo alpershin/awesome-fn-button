@@ -2,18 +2,26 @@
 
 ## Architecture
 
-- `FnCore`: preference reads, planned changes, backup, apply, and restore.
+- `FnCore`: preference reads, planned changes, backup, apply, restore, and standalone Fn press tracking.
 - `AwesomeFnButton`: a compact SwiftUI window with two actions: Apply changes and Restore original settings. Opening or activating it refreshes read-only diagnostics.
 - `fn-diagnose`: a read-only command that prints JSON.
 - `FnCoreTests`: tests using in-memory preferences and temporary files; real system preferences are not changed by tests.
 
-Preferences are read and written with `CFPreferences` for the current user, separately for AnyHost and CurrentHost. Root privileges, keyboard interception, Accessibility, and a background service are not used. App Sandbox is not enabled because the app accesses system preference domains.
+Preferences are read and written with `CFPreferences` for the current user, separately for AnyHost and CurrentHost. Root privileges and a background service are not used. Optional direct switching requires Accessibility and a session event tap while the app runs. App Sandbox is not enabled because the app accesses system preference domains.
+
+## Direct switching
+
+Direct mode is opt-in. Its apply plan sets AppleFnUsageType to `0`, preventing the native picker from competing with `TISSelectInputSource`. Permission and event tap creation are checked before applying preferences. Existing version-1 backups, including the original target `1`, remain restorable. The selected mode is saved only after successful apply.
+
+The event tap passes all keyboard events through unchanged. Only physical Fn flagsChanged records (key code 63) begin/end a tracked press. A standalone release cycles the currently enabled selectable keyboard sources; any intervening key or modifier cancels the switch, preserving Fn chords. There is no timer, debounce, synthetic shortcut, or custom HUD. Text Input Source selection errors are reported in the window.
+
+Timeout/disabled notifications, wake, and session reactivation reset press state and re-enable the monitor. Activation also checks the saved system action and Accessibility permission; if a conflicting system Fn action is detected, direct switching pauses rather than writing over an external change. No login item is installed. Quit leaves the saved Fn action at `0`; reopen to resume or Restore to recover the original settings. The separate macOS caret language indicator is not modified.
 
 ## Scope
 
 | Domain | Key | Change |
 |---|---|---|
-| `com.apple.HIToolbox` | `AppleFnUsageType` | Set to `1`; also update an existing ByHost override |
+| `com.apple.HIToolbox` | `AppleFnUsageType` | Set to `1` in system mode or `0` in direct mode; also update an existing ByHost override |
 | `com.apple.symbolichotkeys` | `AppleSymbolicHotKeys` | Set `enabled = false` only on detected conflicting records |
 
 The shortcut dictionary is reread before modifying a specific record, preserving other entries. The backup stores the affected record in full so restore can detect a later reassignment. The system dictionary has no atomic compare-and-swap operation; do not edit keyboard shortcuts in System Settings during apply.
@@ -32,7 +40,7 @@ The app does not restart system processes, use the private activateSettings help
 
 ## Validation
 
-Fn input switching was verified by the project owner on macOS 27.0 / Apple Silicon. Unit tests cover recovery and conflict handling; additional hardware and OS coverage belongs in the compatibility checklist.
+System-mode Fn input switching was tested by the project owner on macOS 27.0 / Apple Silicon. Direct mode still requires physical-keyboard validation. Unit tests cover press tracking, recovery, and conflict handling; additional hardware and OS coverage belongs in the compatibility checklist.
 
 ## References
 

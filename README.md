@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/alpershin/awesome-fn-button/actions/workflows/ci.yml"><img src="https://github.com/alpershin/awesome-fn-button/actions/workflows/ci.yml/badge.svg" alt="macOS build"></a>
-  <a href="https://github.com/alpershin/awesome-fn-button/releases/tag/v0.1.1"><img src="https://img.shields.io/badge/release-0.1.1-E8BEA5" alt="0.1.1"></a>
+  <a href="https://github.com/alpershin/awesome-fn-button/releases/tag/v0.2.0"><img src="https://img.shields.io/badge/release-0.2.0-E8BEA5" alt="0.2.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-D4C8E8" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/platform-macOS-E1EDF5" alt="macOS">
 </p>
@@ -19,7 +19,7 @@
   <a href="BUILD.md">Build from source</a>
 </p>
 
-> **Verified on macOS 27.0 / Apple Silicon.** Fn input switching has been tested by the project owner on their Mac.
+> **System mode tested on macOS 27.0 / Apple Silicon.** Direct mode is new in 0.2.0 and still needs physical-keyboard validation.
 
 ## Why Awesome Fn Button?
 
@@ -38,7 +38,19 @@ Fn should be predictable when you use it to switch languages. This project bring
 4. Test Fn in another app. If macOS has not picked up the changes, sign out and back in; a restart may also be needed.
 5. Use **Restore original settings** to restore the original values.
 
-You can close the app after applying settings; it does not intercept keystrokes or run as a background service.
+In the default system mode, you can quit the app after applying settings.
+
+### Direct switching without the system picker
+
+If the native Fn switcher stalls or its animation gets in the way, enable **Direct switching — no system picker**, then click **Apply changes**. If an earlier apply has a backup, first use **Restore original settings** once to unlock the mode selection. When permission is missing, **Open Accessibility Settings** opens **System Settings → Privacy & Security → Accessibility**. Allow the app there, then return and click Apply again; permission status refreshes when the app becomes active.
+
+This mode sets the system Fn action to **Do Nothing** and switches enabled input sources directly through the macOS Text Input Source API. A standalone Fn tap switches on release, with no added timer or debounce; Fn combinations with other keys do not switch languages. The app does not display a picker or synthesize keyboard shortcuts.
+
+Keep the app running in this mode. Closing its window keeps switching active; quitting stops it, and the system Fn action stays disabled until you restore. Reopening the app resumes direct switching. No login item is installed. If macOS still shows its picker after applying, sign out and back in once so it picks up the saved Fn action. The small language indicator near the text cursor is separate and may still be shown by macOS.
+
+The event monitor resets after sleep or session reactivation and re-enables itself if macOS disables it after a timeout. Direct mode still requires testing on the actual keyboard; it is not a guarantee against all macOS input issues.
+
+If Accessibility is already enabled but Apply still asks for permission, quit the app, replace the installed copy in **Applications**, and reopen it from there. Remove the old Awesome Fn Button entry from Accessibility with **−**, then use **+** to add `/Applications/Awesome Fn Button.app` and enable it again. Different builds use different ad hoc signatures, so an existing grant may refer to an earlier build or another copy. Keep using the installed copy when granting access.
 
 ## Quick start
 
@@ -68,7 +80,7 @@ See [BUILD.md](BUILD.md) for requirements, testing, read-only diagnostics, and p
 
 | Setting | Behavior |
 |---|---|
-| Fn / Globe primary action | Set the saved assignment to input-source switching |
+| Fn / Globe primary action | Set to input-source switching, or Do Nothing in direct mode |
 | Existing per-Mac Fn override | Update it when present |
 | Explicit saved Fn shortcuts | Disable detected conflicts, including the known double-tap format |
 | Other keyboard settings | Preserve unrelated shortcuts and the F-key / navigation layer |

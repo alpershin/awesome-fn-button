@@ -1,4 +1,4 @@
-Awesome Fn Button 0.1.1
+Awesome Fn Button 0.2.0
 
 INSTALLATION
 1. Drag Awesome Fn Button.app into Applications.
@@ -14,6 +14,17 @@ USAGE
 The app reads your settings and previews changes before applying them.
 Click Apply changes to back up the original values and configure Fn.
 If Fn has not updated yet, sign out and back in or restart your Mac.
+
+DIRECT SWITCHING
+To bypass the native Fn picker, enable Direct switching - no system picker.
+If an existing backup locks this option, Restore original settings first.
+Use Open Accessibility Settings to grant permission in Privacy & Security.
+Return to the app and click Apply again after granting permission.
+A standalone Fn tap switches on release. Fn combinations stay available.
+Keep the app running; closing the window is fine, quitting stops switching.
+Reopen to resume or Restore to recover the original system Fn action.
+No login item is installed. The separate indicator near the text cursor may remain.
+Direct mode needs physical keyboard verification.
 
 RECOVERY
 Open the app and click Restore original settings.

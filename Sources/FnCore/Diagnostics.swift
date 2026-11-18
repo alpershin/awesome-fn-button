@@ -36,7 +36,7 @@ public enum Diagnostics {
         }
     }
 
-    public static func scan(store: PreferenceStore, sources: [String]) throws -> DiagnosticReport {
+    public static func scan(store: PreferenceStore, sources: [String], directSwitching: Bool = false) throws -> DiagnosticReport {
         var changes: [SettingChange] = []
         var notes = [
             "System preference compatibility depends on the macOS version.",
@@ -54,12 +54,13 @@ public enum Diagnostics {
         } else {
             assignment = "No explicit assignment saved"
         }
-        let target = try PreferenceValue(1)
+        let target = try PreferenceValue(directSwitching ? 0 : 1)
         for (address, before) in [(PreferenceAddress.fn(), anyFn), (.fn(currentHost: true), hostFn)] {
             let existing = try before.object()
             if address.currentHost && existing == nil { continue }
             if before != target {
-                changes.append(SettingChange(address: address, title: "Fn → language switching\(address.currentHost ? " (this Mac)" : "")",
+                let action = directSwitching ? "Disable the system Fn picker (app switches directly)" : "Fn → language switching"
+                changes.append(SettingChange(address: address, title: "\(action)\(address.currentHost ? " (this Mac)" : "")",
                                              before: before, after: target))
             }
         }
