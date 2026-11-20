@@ -10,12 +10,14 @@ private struct Backup: Codable {
 
 public final class Configuration {
     private let store: PreferenceStore
+    private let activateFnAction: () throws -> Void
     public let backupURL: URL
     public var hasBackup: Bool { FileManager.default.fileExists(atPath: backupURL.path) }
 
-    public init(store: PreferenceStore, backupURL: URL) {
+    public init(store: PreferenceStore, backupURL: URL, activateFnAction: @escaping () throws -> Void = {}) {
         self.store = store
         self.backupURL = backupURL
+        self.activateFnAction = activateFnAction
     }
 
     public static var defaultBackupURL: URL {
@@ -45,6 +47,7 @@ public final class Configuration {
                     throw FnError.message("Could not verify the saved setting: \(change.title).")
                 }
             }
+            if changes.contains(where: { $0.address.member == nil }) { try activateFnAction() }
         } catch {
             let cause = error.localizedDescription
             let unresolved: [String]
@@ -89,7 +92,10 @@ public final class Configuration {
                 writes.append(SettingChange(address: address, title: "Fn action", before: current, after: target))
             }
         }
-        guard !writes.isEmpty || original?.pendingFnAction != nil else { return }
+        guard !writes.isEmpty || original?.pendingFnAction != nil else {
+            try activateFnAction()
+            return
+        }
         try validate(changes)
         // Journal both possible applied values so Restore can recover an interrupted handoff.
         let oldChanges = changes.map { change in
@@ -111,6 +117,7 @@ public final class Configuration {
                     throw FnError.message("Could not verify the Fn action.")
                 }
             }
+            try activateFnAction()
             try save(Backup(version: 1, createdAt: journal.createdAt, changes: changes), replacing: true)
         } catch {
             let cause = error
@@ -124,6 +131,7 @@ public final class Configuration {
                     if try store.read(change.address) != change.before { recovered = false }
                 } catch { recovered = false }
             }
+            do { try activateFnAction() } catch { recovered = false }
             if recovered {
                 if let original { try save(original, replacing: true) }
                 else { try FileManager.default.removeItem(at: backupURL) }
@@ -154,6 +162,10 @@ public final class Configuration {
             } catch {
                 unresolved.append("\(title) — \(error.localizedDescription)")
             }
+        }
+        if backup.changes.contains(where: { $0.address.member == nil }) {
+            do { try activateFnAction() }
+            catch { unresolved.append("Fn action activation — \(error.localizedDescription)") }
         }
         if unresolved.isEmpty { try FileManager.default.removeItem(at: backupURL) }
         return unresolved

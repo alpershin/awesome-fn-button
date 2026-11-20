@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/alpershin/awesome-fn-button/actions/workflows/ci.yml"><img src="https://github.com/alpershin/awesome-fn-button/actions/workflows/ci.yml/badge.svg" alt="macOS build"></a>
-  <a href="https://github.com/alpershin/awesome-fn-button/releases/tag/v0.2.3"><img src="https://img.shields.io/badge/release-0.2.3-E8BEA5" alt="0.2.3"></a>
+  <a href="https://github.com/alpershin/awesome-fn-button/releases/tag/v0.2.4"><img src="https://img.shields.io/badge/release-0.2.4-E8BEA5" alt="0.2.4"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-D4C8E8" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/platform-macOS-E1EDF5" alt="macOS">
 </p>
@@ -19,14 +19,14 @@
   <a href="BUILD.md">Build from source</a>
 </p>
 
-> **System mode tested on macOS 27.0 / Apple Silicon.** Direct mode is new in 0.2.0 and still needs physical-keyboard validation.
+> **Tested on macOS 27.0 / Apple Silicon.** The project owner has confirmed that direct Fn switching works on their Mac. Broader hardware and long-running checks remain in the testing checklist.
 
 ## Why Awesome Fn Button?
 
 Fn should be predictable when you use it to switch languages. This project brings the relevant settings into one place, shows exactly what it can change, and keeps a way back.
 
 - **Focused:** configure input switching and disable detected conflicting Fn shortcuts.
-- **Local:** preferences and backups stay on your Mac. No server, account, or telemetry.
+- **Local:** preferences and backups stay on your Mac. No account or telemetry. Update checks contact GitHub only when requested.
 - **Reversible:** keep the original values and restore them without overwriting later user changes.
 - **Open:** native Swift / SwiftUI, MIT licensed, with no third-party runtime dependencies.
 
@@ -44,11 +44,15 @@ In the default system mode, you can quit the app after applying settings.
 
 If the native Fn switcher stalls or its animation gets in the way, enable **Direct switching — no system picker**, then click **Apply changes**. If an earlier apply has a backup, first use **Restore original settings** once to unlock the mode selection. When permission is missing, **Open Accessibility Settings** opens **System Settings → Privacy & Security → Accessibility**. Allow the app there, then return and click Apply again; permission status refreshes when the app becomes active.
 
-This mode sets the system Fn action to **Do Nothing** and switches enabled input sources directly through the macOS Text Input Source API. Fn switches immediately on key-down. A following Fn combination restores the previous language; its indicator may change briefly. The app does not display a picker or synthesize keyboard shortcuts.
+This mode sets the system Fn action to **Do Nothing** and switches enabled input sources directly through the macOS Text Input Source API. Fn switches immediately on key-down, with no added timer or debounce. If another key or modifier follows while Fn is held, the app restores the previous language before passing that keyboard event through. The language indicator may change briefly during such a combination. Fn pressed while Shift, Control, Option, or Command is already held does not switch. The app does not display a picker or synthesize keyboard shortcuts.
 
-Keep the app running in this mode. Closing its window keeps switching active; quitting stops it, and the system Fn action stays disabled until you restore. Reopening the app resumes direct switching. No login item is installed. If macOS still shows its picker after applying, sign out and back in once so it picks up the saved Fn action. The small language indicator near the text cursor is separate and may still be shown by macOS.
+Keep the app running in this mode. Click **Run in Background** or close the settings window; its Dock icon disappears, and the app stays in the menu bar as a globe icon and continues switching languages. Use the globe menu to reopen settings, check for updates, or quit. The Dock icon returns while settings are open. Normal **Quit** stops direct switching and enables the system Fn language action, keeping the app's conflicting-shortcut changes in place. Reopening the app resumes direct switching after checking Accessibility; if access is missing, the system action remains enabled. No login item is installed. If macOS still shows its picker after applying, sign out and back in once so it picks up the saved Fn action. The small language indicator near the text cursor is separate and may still be shown by macOS.
 
-The event monitor resets after sleep or session reactivation and re-enables itself if macOS disables it after a timeout. Direct mode still requires testing on the actual keyboard; it is not a guarantee against all macOS input issues.
+If the system handoff cannot be saved or verified, Quit is cancelled and an error is shown. Force Quit, a crash, or power loss cannot guarantee that the handoff runs.
+
+The handoff applies the Fn action to the live macOS session as well as saving it. Version 0.2.3 only verified storage, which could leave native Fn switching inactive after Quit; 0.2.4 fixes that cached-setting issue.
+
+The event monitor resets after sleep or session reactivation and re-enables itself if macOS disables it after a timeout. Direct switching has been confirmed by the project owner on their Mac; broader hardware and long-running checks remain in the testing checklist.
 
 If Accessibility is already enabled but Apply still asks for permission, quit the app, replace the installed copy in **Applications**, and reopen it from there. Remove the old Awesome Fn Button entry from Accessibility with **−**, then use **+** to add `/Applications/Awesome Fn Button.app` and enable it again. Different builds use different ad hoc signatures, so an existing grant may refer to an earlier build or another copy. Keep using the installed copy when granting access.
 
@@ -71,6 +75,12 @@ xattr -dr com.apple.quarantine "/Applications/Awesome Fn Button.app"
 Then open **Awesome Fn Button** from Applications. This command affects only this app and its contents; other macOS security checks can still apply.
 
 ZIP downloads contain the same application. A SHA-256 file is included with each release for checking download integrity.
+
+### Check for updates
+
+Click **Check for Updates** in the app to check the latest stable GitHub release. If a newer version is available for your Mac, click **Download Update…** and choose where to save its DMG. The app verifies the file size and SHA-256 checksum published by GitHub before saving it, then opens the installer.
+
+Quit the running app, drag the downloaded app into Applications to replace it, and reopen the installed copy. Accessibility may need to be granted again after an update. Updates are checked only when you click the button; no account or background updater is used. Keyboard settings and backups are preserved during the check and download.
 
 ### Development setup
 
@@ -97,6 +107,8 @@ The app saves a local backup before its first change:
 
 A new apply cannot replace an existing backup. Restore only changes a value if it still matches what the app applied. Conflicting external changes are left alone, and the backup is retained until recovery completes.
 
+Direct/system handoffs update the applied Fn action recorded in the backup while preserving the original values. An interrupted handoff is recorded so Restore can recover either of the app's intermediate values.
+
 ## Known limitations
 
 - The preference keys are internal macOS settings, not a stable public Fn configuration API.
@@ -114,10 +126,3 @@ Small fixes, bug reports, and verified compatibility results are welcome. Start 
 ## License
 
 [MIT](LICENSE) © Aleksandr Pershin.
-
-
-## Historical release
-
-This intermediate version is archived. Use [0.2.4](https://github.com/alpershin/awesome-fn-button/releases/tag/v0.2.4) for the current fixes.
-
-See [this version’s release notes](docs/RELEASE-0.2.3.md) for its features and known limitations.

@@ -1,5 +1,7 @@
 import Foundation
 import CoreFoundation
+import Carbon
+import Darwin
 
 public struct PreferenceAddress: Codable, Hashable {
     public let domain: String
@@ -67,6 +69,33 @@ public protocol PreferenceStore {
 
 public final class SystemPreferences: PreferenceStore {
     public init() {}
+
+    /// CFPreferences alone does not update the Fn action used by the current session.
+    public func activateFnAction() throws {
+        let anyHost = try read(.fn())
+        let currentHost = try read(.fn(currentHost: true))
+        guard let number = try (currentHost.object() ?? anyHost.object()) as? NSNumber else {
+            // An absent original preference has no explicit action to activate.
+            return
+        }
+        guard (0...3).contains(number.intValue) else { throw FnError.message("Unsupported Fn action.") }
+        guard !CFPreferencesAppValueIsForced("AppleFnUsageType" as CFString, "com.apple.HIToolbox" as CFString) else {
+            throw FnError.message("The Fn action is managed by an organization profile.")
+        }
+        guard let handle = dlopen("/System/Library/Frameworks/Carbon.framework/Carbon", RTLD_LAZY | RTLD_LOCAL) else {
+            throw FnError.message("Could not load the system Fn settings API. Change the Fn action in Keyboard settings.")
+        }
+        defer { dlclose(handle) }
+        guard let symbol = dlsym(handle, "TISUpdateFnUsageType") else {
+            throw FnError.message("This macOS version cannot activate the Fn action immediately. Change it in Keyboard settings.")
+        }
+        // Private API: resolve dynamically so unsupported macOS versions fail safely.
+        let update = unsafeBitCast(symbol, to: (@convention(c) (Int32) -> Void).self)
+        update(number.int32Value)
+        // The setter also writes AnyHost; preserve distinct per-host/original values.
+        if try read(.fn()) != anyHost { try write(anyHost, at: .fn()) }
+        if try read(.fn(currentHost: true)) != currentHost { try write(currentHost, at: .fn(currentHost: true)) }
+    }
 
     private func root(_ address: PreferenceAddress) throws -> Any? {
         guard CFPreferencesSynchronize(address.domain as CFString, kCFPreferencesCurrentUser,

@@ -1,4 +1,4 @@
-Awesome Fn Button 0.2.3
+Awesome Fn Button 0.2.4
 
 INSTALLATION
 1. Drag Awesome Fn Button.app into Applications.
@@ -27,6 +27,7 @@ Use Run in Background or close the window; the menu bar globe stays active.
 Open its menu to reopen settings, check for updates, or quit the app.
 The Dock icon disappears when settings close and returns when they reopen.
 Normal Quit stops Direct switching and enables the system Fn language action.
+The Fn action is applied to the live macOS session before the app exits.
 Reopening resumes Direct switching once Accessibility is available.
 If handoff fails, Quit is cancelled with an error. Force Quit cannot guarantee
 that the system action is restored.

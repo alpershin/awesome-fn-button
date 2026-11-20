@@ -220,6 +220,65 @@ final class FnCoreTests: XCTestCase {
         XCTAssertNil(try store.read(.fn(currentHost: true)).object())
     }
 
+    func testActivatesLiveFnAfterSavingBothScopesAndForAlreadySavedFallback() throws {
+        let store = MemoryPreferences()
+        store.values[.fn()] = try PreferenceValue(2)
+        store.values[.fn(currentHost: true)] = try PreferenceValue(3)
+        var activated: [[Int]] = []
+        let config = Configuration(store: store, backupURL: backupURL, activateFnAction: {
+            activated.append(try [PreferenceAddress.fn(), .fn(currentHost: true)].map {
+                (try store.read($0).object() as! NSNumber).intValue
+            })
+        })
+        try config.apply(Diagnostics.scan(store: store, sources: ["A", "B"], directSwitching: true).changes, inputSourceCount: 2)
+        try config.setFnAction(1)
+        let writes = store.writes
+        try config.setFnAction(1)
+        XCTAssertEqual(store.writes, writes)
+        try config.setFnAction(0)
+        XCTAssertTrue(try config.restore().isEmpty)
+        XCTAssertEqual(activated, [[0, 0], [1, 1], [1, 1], [0, 0], [2, 3]])
+    }
+
+    func testLiveActivationFailureRollsBackAndReactivatesThePreviousFnMode() throws {
+        let store = MemoryPreferences()
+        store.values[.fn()] = try PreferenceValue(2)
+        var failActivation = false
+        var activated: [Int] = []
+        let config = Configuration(store: store, backupURL: backupURL, activateFnAction: {
+            activated.append((try store.read(.fn()).object() as! NSNumber).intValue)
+            if failActivation {
+                failActivation = false
+                throw FnError.message("Simulated live activation failure")
+            }
+        })
+        try config.apply(Diagnostics.scan(store: store, sources: ["A", "B"], directSwitching: true).changes, inputSourceCount: 2)
+        failActivation = true
+        XCTAssertThrowsError(try config.setFnAction(1))
+        XCTAssertEqual(activated, [0, 1, 0])
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(0))
+        XCTAssertTrue(config.hasBackup)
+        XCTAssertTrue(try config.restore().isEmpty)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(2))
+    }
+
+    func testRestoreRetainsBackupIfLiveFnActivationFails() throws {
+        let store = MemoryPreferences()
+        store.values[.fn()] = try PreferenceValue(2)
+        var failActivation = false
+        let config = Configuration(store: store, backupURL: backupURL, activateFnAction: {
+            if failActivation { throw FnError.message("Simulated live activation failure") }
+        })
+        try config.apply(Diagnostics.scan(store: store, sources: ["A", "B"], directSwitching: true).changes, inputSourceCount: 2)
+        failActivation = true
+        XCTAssertEqual(try config.restore().count, 1)
+        XCTAssertTrue(config.hasBackup)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(2))
+        failActivation = false
+        XCTAssertTrue(try config.restore().isEmpty)
+        XCTAssertFalse(config.hasBackup)
+    }
+
     func testHandoffCreatesBackupWhenFnWasAlreadyDisabledBeforeApply() throws {
         let store = MemoryPreferences()
         store.values[.fn()] = try PreferenceValue(0)

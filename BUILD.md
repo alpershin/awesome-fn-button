@@ -12,7 +12,7 @@ bash scripts/build.sh
 The packaging script builds for the host architecture, creates the macOS icon sizes from `Resources/AppIcon.png`, signs the bundle ad hoc, verifies it, and produces:
 
 - `build/packaging/Awesome Fn Button.app`
-- `build/releases/awesome-fn-button-0.2.3-<arch>.dmg`
+- `build/releases/awesome-fn-button-0.2.4-<arch>.dmg`
 - the same app in a ZIP archive, plus a SHA-256 file
 
 No Apple account, signing certificate, API key, or notarization is required. Ad hoc signing does not establish Developer ID trust; downloaded builds may require an app-specific Gatekeeper exception.

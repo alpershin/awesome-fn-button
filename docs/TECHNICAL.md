@@ -23,8 +23,9 @@ The app uses LSUIElement and accessory activation policy while settings are clos
 
 The event tap starts and resumes through the application delegate, independently of window appearance. While the tap is running, a userInitiatedAllowingIdleSystemSleep activity keeps key handling responsive under App Nap without preventing idle system sleep. Stopping the tap or quitting releases the activity.
 
-applicationShouldTerminate stops the tap, changes the app-owned AnyHost and existing CurrentHost Fn actions to `1`, and verifies the stored values before allowing normal Quit. Conflicting-shortcut entries remain disabled. Failure cancels Quit and attempts to resume the existing mode. applicationWillTerminate then releases runtime resources. The saved direct-mode preference remains selected for the next launch; the tap and Accessibility permission are checked before the native action is disabled again. Force Quit and crashes do not guarantee termination callbacks.
+applicationShouldTerminate blocks further refresh/resume work, stops the tap, changes the app-owned AnyHost and existing CurrentHost Fn actions to `1`, and applies the effective action to the live macOS session before allowing normal Quit. Conflicting-shortcut entries remain disabled. Failure cancels Quit and attempts to resume the existing mode. applicationWillTerminate then releases runtime resources. The saved direct-mode preference remains selected for the next launch; the tap and Accessibility permission are checked before the native action is disabled again. Force Quit and crashes do not guarantee termination callbacks.
 
+CFPreferences storage verification alone does not activate Fn behavior. SystemPreferences dynamically resolves the private HIToolbox `TISUpdateFnUsageType(Int32)` function and calls it after preference changes, including when a handoff's target value is already stored. This applies to explicit Fn actions in Apply, Restore, direct/system handoff, and rollback. The function also writes the global preference, so distinct AnyHost/CurrentHost values are preserved after the call. Absent original values are preserved as absent without guessing a factory action; restoring those may still need a fresh login session. Missing symbols or managed Fn settings report an error instead of silently claiming live activation.
 
 ## Updates
 
@@ -57,7 +58,7 @@ The app does not restart system processes, use the private activateSettings help
 
 ## Validation
 
-System and direct Fn input switching were tested by the project owner on macOS 27.0 / Apple Silicon. Unit tests cover press tracking, recovery, conflict handling, release selection, HTTP failures, and download verification; additional hardware and OS coverage belongs in the compatibility checklist.
+System and direct Fn input switching were tested by the project owner on macOS 27.0 / Apple Silicon. The owner also confirmed that live activation restores native Fn switching with the app fully closed, after a stored action `1` alone failed to take effect. Unit tests cover press tracking, recovery, live-activation ordering/failure, conflict handling, release selection, HTTP failures, and download verification; additional hardware and OS coverage belongs in the compatibility checklist.
 
 ## References
 
@@ -69,5 +70,3 @@ System and direct Fn input switching were tested by the project owner on macOS 2
 - [Apple: ad hoc signing on Apple Silicon](https://developer.apple.com/documentation/macos-release-notes/macos-big-sur-11_0_1-universal-apps-release-notes).
 - [Apple: opening apps without notarization](https://support.apple.com/102445).
 - [Inputalk: live Fn action activation](https://github.com/sebi75/inputalk/pull/10). Primary implementation reference for the private HIToolbox function, not a public Apple API contract.
-
-Known limitation: this version does not apply Fn changes to the live session. Use 0.2.4.

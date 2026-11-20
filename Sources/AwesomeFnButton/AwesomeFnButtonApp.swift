@@ -15,10 +15,13 @@ final class AppModel: ObservableObject {
     @Published private(set) var directRunning = false
     @Published private(set) var accessibilityGranted = AXIsProcessTrusted()
     private let store = SystemPreferences()
-    private lazy var configuration = Configuration(store: store, backupURL: Configuration.defaultBackupURL)
+    private lazy var configuration = Configuration(store: store, backupURL: Configuration.defaultBackupURL,
+                                                   activateFnAction: store.activateFnAction)
     private let switcher = DirectInputSwitcher()
+    private var preparingToQuit = false
 
     func refresh() {
+        guard !preparingToQuit else { return }
         accessibilityGranted = AXIsProcessTrusted()
         do {
             report = try Diagnostics.scan(store: store, sources: Diagnostics.inputSources(), directSwitching: directSwitching)
@@ -76,6 +79,7 @@ final class AppModel: ObservableObject {
     }
 
     func resume() {
+        guard !preparingToQuit else { return }
         switcher.resume()
         refresh()
     }
@@ -86,11 +90,14 @@ final class AppModel: ObservableObject {
     }
 
     func prepareToQuit() throws {
+        guard !preparingToQuit else { return }
+        preparingToQuit = true
         stop()
         guard directEnabled else { return }
         do {
             try configuration.setFnAction(1)
         } catch {
+            preparingToQuit = false
             refresh()
             throw error
         }
