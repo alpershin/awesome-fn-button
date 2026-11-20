@@ -51,3 +51,9 @@ System-mode Fn input switching was tested by the project owner on macOS 27.0 / A
 - [macOS defaults: observed AppleFnUsageType values](https://macos-defaults.com/keyboard/applefnusagetype.html). Community observations, not an Apple compatibility guarantee.
 - [Apple: ad hoc signing on Apple Silicon](https://developer.apple.com/documentation/macos-release-notes/macos-big-sur-11_0_1-universal-apps-release-notes).
 - [Apple: opening apps without notarization](https://support.apple.com/102445).
+
+## Updates
+
+The update button requests the public GitHub `repos/alpershin/awesome-fn-button/releases/latest` endpoint without authentication. There are no background checks. Numeric three-part versions are compared numerically; draft/prerelease responses and downgrades are not offered. The installer must match the running binary's architecture and the exact release asset name and repository download URL.
+
+The download is asynchronous. Its size and SHA-256 digest from GitHub release metadata are verified before an atomic save to the user-selected destination. A failed check or download does not change keyboard settings, backups, or the installed application. The verified DMG opens through NSWorkspace; replacing the app remains the usual Finder drag-to-install operation. Ad hoc updates can require Accessibility to be granted again.

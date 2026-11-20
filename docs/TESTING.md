@@ -38,3 +38,6 @@ Record the Mac model, keyboard model, macOS version, and any active keyboard rem
 - [ ] Direct-mode Restore stops the event tap and restores original Fn values. Reopen with a legacy backup and confirm no direct monitor starts.
 
 These checks require the actual keyboard and user session. Record results per OS/hardware combination.
+
+
+For this reconstructed intermediate source, run the unit tests and packaging checks described in BUILD.md. Hardware validation and known issues are recorded in RELEASE-0.2.1.md.

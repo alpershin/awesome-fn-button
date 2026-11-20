@@ -1,4 +1,4 @@
-Awesome Fn Button 0.2.0
+Awesome Fn Button 0.2.1
 
 INSTALLATION
 1. Drag Awesome Fn Button.app into Applications.
@@ -24,7 +24,14 @@ A standalone Fn tap switches on release. Fn combinations stay available.
 Keep the app running; closing the window is fine, quitting stops switching.
 Reopen to resume or Restore to recover the original system Fn action.
 No login item is installed. The separate indicator near the text cursor may remain.
-Direct mode needs physical keyboard verification.
+The project owner has confirmed direct switching on their Mac.
+
+UPDATES
+Use Check for Updates to check the latest stable release on GitHub.
+Download Update saves the matching DMG after verifying its size and SHA-256.
+The installer opens when the download is ready. Quit the app, replace it in
+Applications, then reopen it. You may need to grant Accessibility again.
+Update checks happen only when requested; no background updater is installed.
 
 RECOVERY
 Open the app and click Restore original settings.

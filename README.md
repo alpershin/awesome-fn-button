@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/alpershin/awesome-fn-button/actions/workflows/ci.yml"><img src="https://github.com/alpershin/awesome-fn-button/actions/workflows/ci.yml/badge.svg" alt="macOS build"></a>
-  <a href="https://github.com/alpershin/awesome-fn-button/releases/tag/v0.2.0"><img src="https://img.shields.io/badge/release-0.2.0-E8BEA5" alt="0.2.0"></a>
+  <a href="https://github.com/alpershin/awesome-fn-button/releases/tag/v0.2.1"><img src="https://img.shields.io/badge/release-0.2.1-E8BEA5" alt="0.2.1"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-D4C8E8" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/platform-macOS-E1EDF5" alt="macOS">
 </p>
@@ -114,3 +114,10 @@ Small fixes, bug reports, and verified compatibility results are welcome. Start 
 ## License
 
 [MIT](LICENSE) © Aleksandr Pershin.
+
+
+## Historical release
+
+This intermediate version is archived. Use [0.2.4](https://github.com/alpershin/awesome-fn-button/releases/tag/v0.2.4) for the current fixes.
+
+See [this version’s release notes](docs/RELEASE-0.2.1.md) for its features and known limitations.

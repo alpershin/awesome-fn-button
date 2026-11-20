@@ -99,10 +99,11 @@ final class AppModel: ObservableObject {
 @main
 struct AwesomeFnButtonApp: App {
     @StateObject private var model = AppModel()
+    @StateObject private var updates = UpdateModel()
 
     var body: some Scene {
         WindowGroup("Awesome Fn Button") {
-            ContentView(model: model)
+            ContentView(model: model, updates: updates)
                 .frame(width: 460)
                 .fixedSize(horizontal: false, vertical: true)
                 .onAppear {
@@ -127,6 +128,7 @@ struct AwesomeFnButtonApp: App {
 
 struct ContentView: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var updates: UpdateModel
 
     private var canApply: Bool {
         !model.busy && !model.hasBackup && model.report != nil
@@ -232,6 +234,9 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity)
             }
             .controlSize(.large)
+
+            Divider()
+            UpdateView(model: updates)
         }
         .padding(20)
     }
