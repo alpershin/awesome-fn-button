@@ -42,6 +42,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        do {
+            try model.prepareToQuit()
+            return .terminateNow
+        } catch {
+            sender.activate(ignoringOtherApps: true)
+            let alert = NSAlert()
+            alert.messageText = "Could not enable system Fn switching"
+            alert.informativeText = error.localizedDescription + "\nThe app has not quit. Review its settings before trying again."
+            alert.addButton(withTitle: "Keep Running")
+            alert.runModal()
+            return .terminateCancel
+        }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         model.stop()
         subscriptions.removeAll()

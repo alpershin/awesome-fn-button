@@ -183,6 +183,144 @@ final class FnCoreTests: XCTestCase {
         }
     }
 
+    func testQuitHandoffEnablesSystemFnAndPreservesOriginalsAndDisabledConflicts() throws {
+        let store = MemoryPreferences()
+        store.values[.fn()] = try PreferenceValue(2)
+        store.values[.fn(currentHost: true)] = try PreferenceValue(3)
+        let shortcut = try hotkey([113, 12, 8388608])
+        store.values[.hotkeys(member: "190")] = shortcut
+        let config = Configuration(store: store, backupURL: backupURL)
+        try config.apply(Diagnostics.scan(store: store, sources: ["A", "B"], directSwitching: true).changes, inputSourceCount: 2)
+        let disabled = try store.read(.hotkeys(member: "190"))
+        try config.setFnAction(1)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(1))
+        XCTAssertEqual(try store.read(.fn(currentHost: true)), try PreferenceValue(1))
+        XCTAssertEqual(try store.read(.hotkeys(member: "190")), disabled)
+        XCTAssertTrue(config.hasBackup)
+        XCTAssertTrue(try config.restore().isEmpty)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(2))
+        XCTAssertEqual(try store.read(.fn(currentHost: true)), try PreferenceValue(3))
+        XCTAssertEqual(try store.read(.hotkeys(member: "190")), shortcut)
+    }
+
+    func testDirectModeResumesAfterQuitAndStillRestoresAbsentOriginal() throws {
+        let store = MemoryPreferences()
+        let config = Configuration(store: store, backupURL: backupURL)
+        try config.apply(Diagnostics.scan(store: store, sources: ["A", "B"], directSwitching: true).changes, inputSourceCount: 2)
+        for _ in 0..<3 {
+            try config.setFnAction(1)
+            try config.setFnAction(0)
+            XCTAssertEqual(try store.read(.fn()), try PreferenceValue(0))
+        }
+        let writes = store.writes
+        try config.setFnAction(0)
+        XCTAssertEqual(store.writes, writes)
+        XCTAssertTrue(try config.restore().isEmpty)
+        XCTAssertNil(try store.read(.fn()).object())
+        XCTAssertNil(try store.read(.fn(currentHost: true)).object())
+    }
+
+    func testHandoffCreatesBackupWhenFnWasAlreadyDisabledBeforeApply() throws {
+        let store = MemoryPreferences()
+        store.values[.fn()] = try PreferenceValue(0)
+        let config = Configuration(store: store, backupURL: backupURL)
+        try config.setFnAction(1)
+        XCTAssertTrue(config.hasBackup)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(1))
+        try config.setFnAction(0)
+        try config.setFnAction(1)
+        XCTAssertTrue(try config.restore().isEmpty)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(0))
+    }
+
+    func testHandoffFailureRollsBackBothPreferencesAndBackup() throws {
+        let store = MemoryPreferences()
+        store.values[.fn()] = try PreferenceValue(2)
+        store.values[.fn(currentHost: true)] = try PreferenceValue(2)
+        let config = Configuration(store: store, backupURL: backupURL)
+        try config.apply(Diagnostics.scan(store: store, sources: ["A", "B"], directSwitching: true).changes, inputSourceCount: 2)
+        store.failNextWriteAt = .fn(currentHost: true)
+        XCTAssertThrowsError(try config.setFnAction(1))
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(0))
+        XCTAssertEqual(try store.read(.fn(currentHost: true)), try PreferenceValue(0))
+        XCTAssertTrue(try config.restore().isEmpty)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(2))
+        XCTAssertEqual(try store.read(.fn(currentHost: true)), try PreferenceValue(2))
+    }
+
+    func testHandoffPreservesExternalActionsAndDoesNotDisableUntrackedNativeFnOnLaunch() throws {
+        let store = MemoryPreferences()
+        let config = Configuration(store: store, backupURL: backupURL)
+        store.values[.fn()] = try PreferenceValue(1)
+        XCTAssertThrowsError(try config.setFnAction(0))
+        XCTAssertFalse(config.hasBackup)
+        XCTAssertEqual(store.writes, 0)
+        try config.apply(Diagnostics.scan(store: store, sources: ["A", "B"], directSwitching: true).changes, inputSourceCount: 2)
+        store.values[.fn()] = try PreferenceValue(3)
+        let writes = store.writes
+        XCTAssertThrowsError(try config.setFnAction(1))
+        XCTAssertThrowsError(try config.setFnAction(0))
+        XCTAssertEqual(store.writes, writes)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(3))
+        store.values[.fn()] = try PreferenceValue(1)
+        XCTAssertNoThrow(try config.setFnAction(1))
+        XCTAssertThrowsError(try config.setFnAction(0))
+        XCTAssertTrue(try config.restore().isEmpty)
+    }
+
+    private func writeHandoffJournal(action: Int, addresses: [PreferenceAddress]) throws {
+        var backup = try JSONSerialization.jsonObject(with: Data(contentsOf: backupURL)) as! [String: Any]
+        backup["pendingFnAction"] = action
+        backup["pendingFnAddresses"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(addresses))
+        try JSONSerialization.data(withJSONObject: backup).write(to: backupURL)
+    }
+
+    func testRestoreRecoversAnInterruptedHandoffButPreservesAnExternalAction() throws {
+        let store = MemoryPreferences()
+        store.values[.fn()] = try PreferenceValue(2)
+        store.values[.fn(currentHost: true)] = try PreferenceValue(3)
+        let config = Configuration(store: store, backupURL: backupURL)
+        try config.apply(Diagnostics.scan(store: store, sources: ["A", "B"], directSwitching: true).changes, inputSourceCount: 2)
+        try writeHandoffJournal(action: 1, addresses: [.fn(), .fn(currentHost: true)])
+        store.values[.fn()] = try PreferenceValue(1)
+        store.values[.fn(currentHost: true)] = try PreferenceValue(2)
+        XCTAssertEqual(try config.restore().count, 1)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(2))
+        XCTAssertEqual(try store.read(.fn(currentHost: true)), try PreferenceValue(2))
+        XCTAssertTrue(config.hasBackup)
+        store.values[.fn(currentHost: true)] = try PreferenceValue(0)
+        XCTAssertTrue(try config.restore().isEmpty)
+        XCTAssertEqual(try store.read(.fn(currentHost: true)), try PreferenceValue(3))
+    }
+
+    func testResumeCanCompleteAnInterruptedHandoff() throws {
+        let store = MemoryPreferences()
+        store.values[.fn()] = try PreferenceValue(2)
+        let config = Configuration(store: store, backupURL: backupURL)
+        try config.apply(Diagnostics.scan(store: store, sources: ["A", "B"], directSwitching: true).changes, inputSourceCount: 2)
+        try writeHandoffJournal(action: 1, addresses: [.fn()])
+        store.values[.fn()] = try PreferenceValue(1)
+        try config.setFnAction(0)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(0))
+        XCTAssertTrue(try config.restore().isEmpty)
+        XCTAssertEqual(try store.read(.fn()), try PreferenceValue(2))
+    }
+
+    func testRejectsInvalidHandoffJournalBeforeWritingPreferences() throws {
+        let store = MemoryPreferences()
+        let config = Configuration(store: store, backupURL: backupURL)
+        try config.apply(Diagnostics.scan(store: store, sources: ["A", "B"], directSwitching: true).changes, inputSourceCount: 2)
+        let writes = store.writes
+        try writeHandoffJournal(action: 2, addresses: [.fn()])
+        XCTAssertThrowsError(try config.setFnAction(1))
+        XCTAssertThrowsError(try config.restore())
+        try writeHandoffJournal(action: 1, addresses: [.hotkeys(member: "190")])
+        XCTAssertThrowsError(try config.setFnAction(1))
+        XCTAssertThrowsError(try config.restore())
+        XCTAssertEqual(store.writes, writes)
+        XCTAssertTrue(config.hasBackup)
+    }
+
     func testFnChordsUndoTheImmediateSwitchOnceAndIgnoreImplicitNavigationFlags() {
         for code: Int64 in [12, 96, 123, 117] {
             var press = FnPress()

@@ -23,13 +23,11 @@ final class AppModel: ObservableObject {
         do {
             report = try Diagnostics.scan(store: store, sources: Diagnostics.inputSources(), directSwitching: directSwitching)
             if directEnabled {
-                let fn = try store.read(.fn(currentHost: true)).object() ?? store.read(.fn()).object()
-                guard fn as? NSNumber == NSNumber(value: 0) else {
-                    throw FnError.message("The system Fn action changed outside the app. Direct switching is paused to prevent double switching. Restore, then apply again.")
-                }
                 switcher.onError = { [weak self] text in self?.show(text, error: true) }
                 try switcher.start()
+                try configuration.setFnAction(0)
                 directRunning = true
+                report = try Diagnostics.scan(store: store, sources: Diagnostics.inputSources(), directSwitching: directSwitching)
             }
         } catch {
             switcher.stop()
@@ -85,6 +83,17 @@ final class AppModel: ObservableObject {
     func stop() {
         switcher.stop()
         directRunning = false
+    }
+
+    func prepareToQuit() throws {
+        stop()
+        guard directEnabled else { return }
+        do {
+            try configuration.setFnAction(1)
+        } catch {
+            refresh()
+            throw error
+        }
     }
 
     func openAccessibilitySettings() {
@@ -168,7 +177,7 @@ struct ContentView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Text(model.directRunning
-                     ? "Direct switching is running in the background. Use the globe in the menu bar to reopen settings or quit."
+                     ? "Direct switching is running in the background. Quitting returns Fn to system language switching. Use the globe menu for settings or Quit."
                      : "Requires Accessibility permission. Fn switches on key-down; a following Fn combination restores the previous language. Its indicator may change briefly.")
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
