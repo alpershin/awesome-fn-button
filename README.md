@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/alpershin/awesome-fn-button/actions/workflows/ci.yml"><img src="https://github.com/alpershin/awesome-fn-button/actions/workflows/ci.yml/badge.svg" alt="macOS build"></a>
-  <a href="https://github.com/alpershin/awesome-fn-button/releases/tag/v0.2.1"><img src="https://img.shields.io/badge/release-0.2.1-E8BEA5" alt="0.2.1"></a>
+  <a href="https://github.com/alpershin/awesome-fn-button/releases/tag/v0.2.2"><img src="https://img.shields.io/badge/release-0.2.2-E8BEA5" alt="0.2.2"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-D4C8E8" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/platform-macOS-E1EDF5" alt="macOS">
 </p>
@@ -44,7 +44,7 @@ In the default system mode, you can quit the app after applying settings.
 
 If the native Fn switcher stalls or its animation gets in the way, enable **Direct switching — no system picker**, then click **Apply changes**. If an earlier apply has a backup, first use **Restore original settings** once to unlock the mode selection. When permission is missing, **Open Accessibility Settings** opens **System Settings → Privacy & Security → Accessibility**. Allow the app there, then return and click Apply again; permission status refreshes when the app becomes active.
 
-This mode sets the system Fn action to **Do Nothing** and switches enabled input sources directly through the macOS Text Input Source API. A standalone Fn tap switches on release, with no added timer or debounce; Fn combinations with other keys do not switch languages. The app does not display a picker or synthesize keyboard shortcuts.
+This mode sets the system Fn action to **Do Nothing** and switches enabled input sources directly through the macOS Text Input Source API. Fn switches immediately on key-down. A following Fn combination restores the previous language; its indicator may change briefly. The app does not display a picker or synthesize keyboard shortcuts.
 
 Keep the app running in this mode. Closing its window keeps switching active; quitting stops it, and the system Fn action stays disabled until you restore. Reopening the app resumes direct switching. No login item is installed. If macOS still shows its picker after applying, sign out and back in once so it picks up the saved Fn action. The small language indicator near the text cursor is separate and may still be shown by macOS.
 
@@ -120,4 +120,4 @@ Small fixes, bug reports, and verified compatibility results are welcome. Start 
 
 This intermediate version is archived. Use [0.2.4](https://github.com/alpershin/awesome-fn-button/releases/tag/v0.2.4) for the current fixes.
 
-See [this version’s release notes](docs/RELEASE-0.2.1.md) for its features and known limitations.
+See [this version’s release notes](docs/RELEASE-0.2.2.md) for its features and known limitations.

@@ -173,46 +173,55 @@ final class FnCoreTests: XCTestCase {
         XCTAssertTrue(config.hasBackup)
     }
 
-    func testFnSwitchesOncePerReleaseWithoutWaitingOrDebouncing() {
+    func testFnSwitchesImmediatelyOnKeyDownAndNeverAgainOnRelease() {
         var press = FnPress()
         for _ in 0..<30 {
-            XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
-            XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
-            XCTAssertTrue(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
-            XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
+            XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn), .switchInputSource)
+            XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn), .none)
+            XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: []), .finish)
+            XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: []), .none)
         }
     }
 
-    func testFnChordsAndImplicitNavigationFlagsDoNotSwitchLanguage() {
+    func testFnChordsUndoTheImmediateSwitchOnceAndIgnoreImplicitNavigationFlags() {
         for code: Int64 in [12, 96, 123, 117] {
             var press = FnPress()
-            XCTAssertFalse(press.handle(type: .keyDown, keyCode: code, flags: .maskSecondaryFn))
-            XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
-            XCTAssertFalse(press.handle(type: .keyDown, keyCode: code, flags: .maskSecondaryFn))
-            XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
-            XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
-            XCTAssertTrue(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
+            XCTAssertEqual(press.handle(type: .keyDown, keyCode: code, flags: .maskSecondaryFn), .none)
+            XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn), .switchInputSource)
+            XCTAssertEqual(press.handle(type: .keyDown, keyCode: code, flags: .maskSecondaryFn), .restoreInputSource)
+            XCTAssertEqual(press.handle(type: .keyDown, keyCode: code, flags: .maskSecondaryFn), .none)
+            XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: []), .finish)
+            XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn), .switchInputSource)
+            XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: []), .finish)
         }
     }
 
-    func testModifiersAndResetCancelPendingFnPress() {
+    func testHeldModifiersSuppressTheSwitchAndFollowingModifiersUndoIt() {
         var press = FnPress()
-        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: [.maskSecondaryFn, .maskShift]))
-        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
-        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
-        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 56, flags: [.maskSecondaryFn, .maskShift]))
-        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 56, flags: .maskSecondaryFn))
-        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
-        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: [.maskSecondaryFn, .maskShift]), .none)
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: []), .finish)
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn), .switchInputSource)
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 56, flags: [.maskSecondaryFn, .maskShift]), .restoreInputSource)
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 56, flags: .maskSecondaryFn), .none)
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: []), .finish)
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn), .switchInputSource)
         press.reset()
-        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: []), .none)
     }
 
     func testMissingFnReleaseDoesNotLeaveTheNextTapStuckAfterTyping() {
         var press = FnPress()
-        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
-        XCTAssertFalse(press.handle(type: .keyDown, keyCode: 0, flags: []))
-        XCTAssertFalse(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn))
-        XCTAssertTrue(press.handle(type: .flagsChanged, keyCode: 63, flags: []))
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn), .switchInputSource)
+        XCTAssertEqual(press.handle(type: .keyDown, keyCode: 0, flags: []), .finish)
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn), .switchInputSource)
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: []), .finish)
+    }
+
+    func testTypingAfterFnReleaseKeepsTheNewLanguage() {
+        var press = FnPress()
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: .maskSecondaryFn), .switchInputSource)
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 63, flags: []), .finish)
+        XCTAssertEqual(press.handle(type: .keyDown, keyCode: 0, flags: []), .none)
+        XCTAssertEqual(press.handle(type: .flagsChanged, keyCode: 56, flags: .maskShift), .none)
     }
 }

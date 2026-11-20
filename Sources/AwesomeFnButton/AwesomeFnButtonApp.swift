@@ -49,7 +49,7 @@ final class AppModel: ObservableObject {
             directEnabled = directSwitching
             UserDefaults.standard.set(directEnabled, forKey: "directSwitching")
             show(directSwitching
-                 ? "Direct switching enabled. Tap and release Fn to switch without the system picker. Keep the app running; you can close its window. If the system picker still appears, sign out and back in once."
+                 ? "Direct switching enabled. Press Fn to switch immediately. A following Fn combination restores the previous language. You can close this window and keep using the menu bar globe."
                  : "Changes applied. If Fn has not updated yet, sign out and back in, then try switching languages.")
         } catch {
             switcher.stop()
@@ -82,6 +82,11 @@ final class AppModel: ObservableObject {
         refresh()
     }
 
+    func stop() {
+        switcher.stop()
+        directRunning = false
+    }
+
     func openAccessibilitySettings() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         accessibilityGranted = AXIsProcessTrustedWithOptions(options)
@@ -98,35 +103,31 @@ final class AppModel: ObservableObject {
 
 @main
 struct AwesomeFnButtonApp: App {
-    @StateObject private var model = AppModel()
-    @StateObject private var updates = UpdateModel()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        WindowGroup("Awesome Fn Button") {
-            ContentView(model: model, updates: updates)
+        Window("Awesome Fn Button", id: "settings") {
+            ContentView(model: appDelegate.model, updates: appDelegate.updates)
                 .frame(width: 460)
                 .fixedSize(horizontal: false, vertical: true)
                 .onAppear {
                     NSApp.setActivationPolicy(.regular)
                     NSApp.activate(ignoringOtherApps: true)
-                    model.refresh()
-                }
-                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-                    model.refresh()
-                }
-                .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didWakeNotification)) { _ in
-                    model.resume()
-                }
-                .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.sessionDidBecomeActiveNotification)) { _ in
-                    model.resume()
+                    appDelegate.model.refresh()
                 }
         }
         .windowResizability(.contentSize)
         .commands { CommandGroup(replacing: .newItem) {} }
+
+        MenuBarExtra("Awesome Fn Button", systemImage: "globe") {
+            BackgroundMenu(model: appDelegate.model, updates: appDelegate.updates)
+        }
+        .menuBarExtraStyle(.menu)
     }
 }
 
 struct ContentView: View {
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject var model: AppModel
     @ObservedObject var updates: UpdateModel
 
@@ -167,8 +168,8 @@ struct ContentView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Text(model.directRunning
-                     ? "Direct switching is running. Close the window to keep it active; quitting the app stops switching."
-                     : "Requires Accessibility permission and the app running. A standalone Fn tap switches on release; Fn combinations are preserved.")
+                     ? "Direct switching is running in the background. Use the globe in the menu bar to reopen settings or quit."
+                     : "Requires Accessibility permission. Fn switches on key-down; a following Fn combination restores the previous language. Its indicator may change briefly.")
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -234,6 +235,10 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity)
             }
             .controlSize(.large)
+
+            Button("Run in Background") { dismiss() }
+                .help("Close this window and keep the app running in the menu bar.")
+                .frame(maxWidth: .infinity, alignment: .trailing)
 
             Divider()
             UpdateView(model: updates)

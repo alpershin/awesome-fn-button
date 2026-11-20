@@ -13,7 +13,7 @@ Preferences are read and written with `CFPreferences` for the current user, sepa
 
 Direct mode is opt-in. Its apply plan sets AppleFnUsageType to `0`, preventing the native picker from competing with `TISSelectInputSource`. Permission and event tap creation are checked before applying preferences. Existing version-1 backups, including the original target `1`, remain restorable. The selected mode is saved only after successful apply.
 
-The event tap passes all keyboard events through unchanged. Only physical Fn flagsChanged records (key code 63) begin/end a tracked press. A standalone release cycles the currently enabled selectable keyboard sources; any intervening key or modifier cancels the switch, preserving Fn chords. There is no timer, debounce, synthetic shortcut, or custom HUD. Text Input Source selection errors are reported in the window.
+The event tap passes all keyboard events through unchanged. Only physical Fn flagsChanged records (key code 63) begin/end a tracked press. Fn-down cycles enabled input sources; a following keyboard event while Fn is held restores the previous input source. There is no timer, debounce, synthetic shortcut, or custom HUD. Text Input Source selection errors are reported in the window.
 
 Timeout/disabled notifications, wake, and session reactivation reset press state and re-enable the monitor. Activation also checks the saved system action and Accessibility permission; if a conflicting system Fn action is detected, direct switching pauses rather than writing over an external change. No login item is installed. Quit leaves the saved Fn action at `0`; reopen to resume or Restore to recover the original settings. The separate macOS caret language indicator is not modified.
 
@@ -57,3 +57,7 @@ System-mode Fn input switching was tested by the project owner on macOS 27.0 / A
 The update button requests the public GitHub `repos/alpershin/awesome-fn-button/releases/latest` endpoint without authentication. There are no background checks. Numeric three-part versions are compared numerically; draft/prerelease responses and downgrades are not offered. The installer must match the running binary's architecture and the exact release asset name and repository download URL.
 
 The download is asynchronous. Its size and SHA-256 digest from GitHub release metadata are verified before an atomic save to the user-selected destination. A failed check or download does not change keyboard settings, backups, or the installed application. The verified DMG opens through NSWorkspace; replacing the app remains the usual Finder drag-to-install operation. Ad hoc updates can require Accessibility to be granted again.
+
+## Background and immediate Fn switching
+
+See [the release notes](RELEASE-0.2.2.md). The menu bar app remains running with settings closed. Fn-down switches immediately; a following keyboard combination restores the previous source.

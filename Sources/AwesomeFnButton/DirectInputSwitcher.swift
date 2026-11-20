@@ -7,7 +7,8 @@ final class DirectInputSwitcher {
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
     private var press = FnPress()
-    private var workspaceObservers: [NSObjectProtocol] = []
+    private var backgroundActivity: NSObjectProtocol?
+    private var pendingSwitch: (original: TISInputSource, selected: TISInputSource)?
     var onError: ((String) -> Void)?
 
     func start(requestPermission: Bool = false) throws {
@@ -36,27 +37,28 @@ final class DirectInputSwitcher {
         self.tap = tap
         self.source = source
         press.reset()
+        pendingSwitch = nil
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
-        workspaceObservers = [NSWorkspace.didWakeNotification, NSWorkspace.sessionDidBecomeActiveNotification].map {
-            NSWorkspace.shared.notificationCenter.addObserver(forName: $0, object: nil, queue: .main) { [weak self] _ in
-                self?.resume()
-            }
-        }
+        // Keep key handling responsive with no windows, while still allowing system sleep.
+        backgroundActivity = ProcessInfo.processInfo.beginActivity(options: .userInitiatedAllowingIdleSystemSleep,
+                                                                   reason: "Respond to Fn language-switching taps in the background")
     }
 
     func stop() {
-        for observer in workspaceObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
-        workspaceObservers.removeAll()
+        if let backgroundActivity { ProcessInfo.processInfo.endActivity(backgroundActivity) }
+        backgroundActivity = nil
         if let tap { CGEvent.tapEnable(tap: tap, enable: false); CFMachPortInvalidate(tap) }
         if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
         tap = nil
         source = nil
         press.reset()
+        pendingSwitch = nil
     }
 
     func resume() {
         press.reset()
+        pendingSwitch = nil
         if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
     }
 
@@ -65,12 +67,31 @@ final class DirectInputSwitcher {
             resume()
             return
         }
-        guard press.handle(type: type, keyCode: event.getIntegerValueField(.keyboardEventKeycode), flags: event.flags) else { return }
-        do { try selectNextSource() }
+        let action = press.handle(type: type, keyCode: event.getIntegerValueField(.keyboardEventKeycode), flags: event.flags)
+        do {
+            switch action {
+            case .none: break
+            case .switchInputSource:
+                pendingSwitch = nil
+                pendingSwitch = try selectNextSource()
+            case .restoreInputSource:
+                let previous = pendingSwitch
+                pendingSwitch = nil
+                if let previous {
+                    let current = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
+                    // Do not overwrite an input source selected elsewhere during the press.
+                    if CFEqual(current, previous.selected) {
+                        let result = TISSelectInputSource(previous.original)
+                        guard result == noErr else { throw FnError.message("Could not restore input source for the Fn combination (\(result)).") }
+                    }
+                }
+            case .finish: pendingSwitch = nil
+            }
+        }
         catch { onError?(error.localizedDescription) }
     }
 
-    private func selectNextSource() throws {
+    private func selectNextSource() throws -> (original: TISInputSource, selected: TISInputSource) {
         let filter = [kTISPropertyInputSourceCategory!: kTISCategoryKeyboardInputSource!] as CFDictionary
         let sources = (TISCreateInputSourceList(filter, false)?.takeRetainedValue() as? [TISInputSource] ?? []).filter {
             guard let capable = TISGetInputSourceProperty($0, kTISPropertyInputSourceIsSelectCapable) else { return false }
@@ -82,6 +103,7 @@ final class DirectInputSwitcher {
         let next = sources[index.map { ($0 + 1) % sources.count } ?? 0]
         let result = TISSelectInputSource(next)
         guard result == noErr else { throw FnError.message("Could not switch input source (\(result)).") }
+        return (current, next)
     }
 
     deinit { stop() }

@@ -1,39 +1,42 @@
 import CoreGraphics
 
-/// Only a standalone physical Fn press may switch languages; Fn chords pass through.
+/// Switch on physical Fn-down, and undo that switch when the press becomes a chord.
 public struct FnPress {
+    public enum Action: Equatable {
+        case none, switchInputSource, restoreInputSource, finish
+    }
+
     private var pressed = false
-    private var usedWithAnotherKey = false
+    private var canUndo = false
 
     public init() {}
 
     public mutating func reset() {
         pressed = false
-        usedWithAnotherKey = false
+        canUndo = false
     }
 
-    public mutating func handle(type: CGEventType, keyCode: Int64, flags: CGEventFlags) -> Bool {
-        if type == .keyDown {
-            if !flags.contains(.maskSecondaryFn) { reset() }
-            else if pressed { usedWithAnotherKey = true }
-            return false
-        }
-        guard type == .flagsChanged else { return false }
-        let modifiers: CGEventFlags = [.maskShift, .maskControl, .maskAlternate, .maskCommand]
-        if keyCode != 63 {
-            if !flags.contains(.maskSecondaryFn) { reset() }
-            else if pressed { usedWithAnotherKey = true }
-            return false
+    public mutating func handle(type: CGEventType, keyCode: Int64, flags: CGEventFlags) -> Action {
+        guard type == .keyDown || type == .flagsChanged else { return .none }
+        if type == .keyDown || keyCode != 63 {
+            guard pressed else { return .none }
+            if !flags.contains(.maskSecondaryFn) {
+                reset()
+                return .finish
+            }
+            guard canUndo else { return .none }
+            canUndo = false
+            return .restoreInputSource
         }
         if flags.contains(.maskSecondaryFn) {
-            if !pressed {
-                pressed = true
-                usedWithAnotherKey = !flags.intersection(modifiers).isEmpty
-            }
-            return false
+            guard !pressed else { return .none }
+            pressed = true
+            let modifiers: CGEventFlags = [.maskShift, .maskControl, .maskAlternate, .maskCommand]
+            canUndo = flags.intersection(modifiers).isEmpty
+            return canUndo ? .switchInputSource : .none
         }
-        let shouldSwitch = pressed && !usedWithAnotherKey && flags.intersection(modifiers).isEmpty
+        guard pressed else { return .none }
         reset()
-        return shouldSwitch
+        return .finish
     }
 }
